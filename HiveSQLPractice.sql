@@ -626,3 +626,225 @@ or d.deptno is null
 +----------+----------+-----------+-----------+-------------+
 
 从所有的数据里面摘取独有的数据结果。
+
+
+-- ### 3.7 多表连接
+data preparation：
+
+1700	Beijing
+1800	London
+1900	Tokyo
+
+
+-- 建表语句
+ create table if not exists location(
+loc int,
+loc_name string
+
+)
+row format delimited fields terminated by '\t';
+
+-- load data
+load data local inpath '/opt/module/hive/datas/mydb2/datatoquery' into table location;
+
+-- 多表查询
+-- 员工姓名，部门姓名，地址姓名
+
+select 
+e.ename, d.dname, l.loc_name
+
+from emp e
+join dept d on d.deptno = e.deptno
+join location l on d.loc = l.loc;
+
++----------+-------------+-------------+
+| e.ename  |   d.dname   | l.loc_name  |
++----------+-------------+-------------+
+| SMITH    | RESEARCH    | London      |
+| ALLEN    | SALES       | Tokyo       |
+| WARD     | SALES       | Tokyo       |
+| JONES    | RESEARCH    | London      |
+| MARTIN   | SALES       | Tokyo       |
+| BLAKE    | SALES       | Tokyo       |
+| CLARK    | ACCOUNTING  | Beijing     |
+| SCOTT    | RESEARCH    | London      |
+| KING     | ACCOUNTING  | Beijing     |
+| TURNER   | SALES       | Tokyo       |
+| ADAMS    | RESEARCH    | London      |
+| JAMES    | SALES       | Tokyo       |
+| FORD     | RESEARCH    | London      |
+| MILLER   | ACCOUNTING  | Beijing     |
+
+-- Hive会对每对JOIN连接对象启动一个MapReduce任务
+-- Hive总是按照从左到右的顺序执行的。
+-- 当对3个或者更多表进行join连接时，如果每个on子句都使用相同的连接键的话，那么只会产生一个MapReduce job。
+
+
+
+-- ## 3.8 笛卡尔积
+
+1）笛卡尔积会在下面条件下产生
+（1）省略连接条件
+（2）连接条件无效
+（3）所有表中的所有行互相连接
+
+select empno, dname from emp, dept;
+
++--------+-------------+
+| empno  |    dname    |
++--------+-------------+
+| 7369   | ACCOUNTING  |
+| 7369   | RESEARCH    |
+| 7369   | SALES       |
+| 7369   | OPERATIONS  |
+| 7499   | ACCOUNTING  |
+| 7499   | RESEARCH    |
+| 7499   | SALES       |
+| 7499   | OPERATIONS  |
+| 7521   | ACCOUNTING  |
+| 7521   | RESEARCH    |
+| 7521   | SALES       |
+| 7521   | OPERATIONS  |
+| 7566   | ACCOUNTING  |
+| 7566   | RESEARCH    |
+| 7566   | SALES       |
+| 7566   | OPERATIONS  |
+| 7654   | ACCOUNTING  |
+| 7654   | RESEARCH    |
+| 7654   | SALES       |
+| 7654   | OPERATIONS  |
+| 7698   | ACCOUNTING  |
+| 7698   | RESEARCH    |
+| 7698   | SALES       |
+| 7698   | OPERATIONS  |
+| 7782   | ACCOUNTING  |
+| 7782   | RESEARCH    |
+| 7782   | SALES       |
+| 7782   | OPERATIONS  |
+| 7788   | ACCOUNTING  |
+| 7788   | RESEARCH    |
+| 7788   | SALES       |
+| 7788   | OPERATIONS  |
+| 7839   | ACCOUNTING  |
+| 7839   | RESEARCH    |
+| 7839   | SALES       |
+| 7839   | OPERATIONS  |
+| 7844   | ACCOUNTING  |
+| 7844   | RESEARCH    |
+| 7844   | SALES       |
+| 7844   | OPERATIONS  |
+| 7876   | ACCOUNTING  |
+| 7876   | RESEARCH    |
+| 7876   | SALES       |
+| 7876   | OPERATIONS  |
+| 7900   | ACCOUNTING  |
+| 7900   | RESEARCH    |
+| 7900   | SALES       |
+| 7900   | OPERATIONS  |
+| 7902   | ACCOUNTING  |
+| 7902   | RESEARCH    |
+| 7902   | SALES       |
+| 7902   | OPERATIONS  |
+| 7934   | ACCOUNTING  |
+| 7934   | RESEARCH    |
+| 7934   | SALES       |
+| 7934   | OPERATIONS  |
++--------+-------------+
+56 rows selected (13.746 seconds)
+
+
+--- Hive 中设置严格模式
+
+
+-- ### 6.4 排序  （重点练习）
+
+Order By：全局排序，只有一个Reducer
+
+
+-- 需求：按照员工的部门编号全局排序
+
+select
+empno,ename,deptno
+from emp
+order by deptno;
+
++--------+---------+---------+
+| empno  |  ename  | deptno  |
++--------+---------+---------+
+| 7934   | MILLER  | 10      |
+| 7839   | KING    | 10      |
+| 7782   | CLARK   | 10      |
+| 7876   | ADAMS   | 20      |
+| 7788   | SCOTT   | 20      |
+| 7369   | SMITH   | 20      |
+| 7566   | JONES   | 20      |
+| 7902   | FORD    | 20      |
+| 7844   | TURNER  | 30      |
+| 7499   | ALLEN   | 30      |
+| 7698   | BLAKE   | 30      |
+| 7654   | MARTIN  | 30      |
+| 7521   | WARD    | 30      |
+| 7900   | JAMES   | 30      |
++--------+---------+---------+
+
+0: jdbc:hive2://hadoop102:10000> set mapreduce.job.reduces;
++---------------------------+
+|            set            |
++---------------------------+
+| mapreduce.job.reduces=-1  |
++---------------------------+
+1 row selected (0.008 seconds)
+
+根据job设置合适的参数
+set mapreduce.job.reduces =4;
+
+INFO  : Total jobs = 1
+INFO  : Launching Job 1 out of 1
+INFO  : Starting task [Stage-1:MAPRED] in serial mode
+INFO  : Number of reduce tasks determined at compile time: 1
+INFO  : In order to change the average load for a reducer (in bytes):
+INFO  :   set hive.exec.reducers.bytes.per.reducer=<number>
+
+order by  是全局排序，不管设置多少个，最终都是只有一个reducer
+
+-- 5.2 每个Reduce内部排序（Sort By） 【伪随机】
+
+-- 注意：当考虑多个结果文件的时候，只能每个文件内部有序 这个时候就用 sort by 
+-- 修改reducer的数量
+set mapreduce.job.reduces=3;
+-- 需求：按照员工的部门编号部分排序
+
+
+-- 将结果导出
+insert overwrite local directory 
+'/opt/module/hive/datas/mydb2/datatoquery/sortby-result'
+ select * from emp sort by deptno;
+
+
+-- 此处的结果应该是升序排序（deptno）
+-- 结论：sort by 确实能实现部分排序，但是它的功能仅仅是排序，并没有按照Hadoop中的默认的分区规则去执行
+--       随机（伪随机...）
+不是hash分布的排序
+
+
+-- 5.3  分区（Distribute By）【默认的hashPartiton实现】
+
+insert overwrite local directory 
+'/opt/module/hive/datas/mydb2/datatoquery/sortby-result2'
+ select * from emp distribute by deptno sort by deptno;
+
+
+-- 结论： distribute by 它主要作用完成分区工作，如果考虑排序，和sort by 连用，其分区规则就是Hadoop中
+--       Hashpartitoner 默认实现！
+
+
+-- 5.4 Cluster By 
+-- 概述：cluster by 等价于 distribute by + sort by 组合
+insert overwrite local directory 
+'/opt/module/hive/datas/mydb2/datatoquery/sortby-result3'
+select * from emp cluster by deptno ;
+
+/** select * from emp cluster by deptno desc  这条语句是不支持的 */
+--结论：cluster by使用有限制
+  -- 1. 当分区字段和排序字段为同一个字段才能用
+  -- 2. cluster by 只能默认按照升序排列，不支持自定义排序规则。
