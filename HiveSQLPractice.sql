@@ -252,3 +252,377 @@ export table default.student to '/user/hive/warehouse/export/student';
 
 -- 2.6 清除表中数据（Truncate）
 truncate table student;
+
+
+
+尚硅谷大数据111门技术+43个项目20240219.docx
+尚硅谷嵌入式技术资料20240403.docx
+
+-- ### 第六章 查询
+
+--DataRecource  : G:\Hadoopecologicalsystem\Hive\HiveSQL\SQLPractice\DataSource\datatoquery  -- -- /opt/module/hive/datas/mydb2/datatoquery
+
+-- 6.1 基本查询（Select…From）
+-- 1 全表和特定列查询
+-- 1） 创建部门表
+create table if not exists dept(
+deptno int,
+dname string,
+loc int
+
+)
+row format delimited fields terminated by '\t';
+
++--------------+-------------+-----------+
+| dept.deptno  | dept.dname  | dept.loc  |
++--------------+-------------+-----------+
+| 10           | ACCOUNTING  | 1700      |
+| 20           | RESEARCH    | 1800      |
+| 30           | SALES       | 1900      |
+| 40           | OPERATIONS  | 1700      |
+| 10           | ACCOUNTING  | 1700      |
+| 20           | RESEARCH    | 1800      |
+| 30           | SALES       | 1900      |
+| 40           | OPERATIONS  | 1700      |
++--------------+-------------+-----------+
+部门号  部门名称   
+
+
+create table if not exists emp(
+empno int,
+ename string,
+job string,
+mgr int,
+hiredate string,
+dal double,
+comm double,
+deptno int
+
+)
+row format delimited fields terminated by  '\t';
+
++------------+------------+-----------+----------+---------------+----------+-----------+-------------+
+| emp.empno  | emp.ename  |  emp.job  | emp.mgr  | emp.hiredate  | emp.sal  | emp.comm  | emp.deptno  |
++------------+------------+-----------+----------+---------------+----------+-----------+-------------+
+| 7369       | SMITH      | CLERK     | 7902     | 1980-12-17    | 800.0    | NULL      | 20          |
+| 7499       | ALLEN      | SALESMAN  | 7698     | 1981-2-20     | 1600.0   | 300.0     | 30          |
+| 7521       | WARD       | SALESMAN  | 7698     | 1981-2-22     | 1250.0   | 500.0     | 30          |
++------------+------------+-----------+----------+---------------+----------+-----------+-------------+
+    员工号		员工姓名	员工职位				入职时间	  薪资						部门编号
+
+--2) 导入数据
+
+alter table dept set tblproperties ('EXTERNAL'='FALSE');
+alter table emp set tblproperties ('EXTERNAL'='FALSE');
+
+
+truncate table  dept;
+truncate table  emp;
+
+load data local inpath '/opt/module/hive/datas/mydb2/datatoquery/dept.txt' into table dept;
+load data local inpath  '/opt/module/hive/datas/mydb2/datatoquery/emp.txt' into table emp;
+
+
+select * from dept;
+select empno, ename,job,mgr,hiredate,sal,comm,deptno from emp;
+select empno, ename from emp;
+
+/**
+（1）SQL 语言大小写不敏感。 
+（2）SQL 可以写在一行或者多行
+（3）关键字不能被缩写也不能分行
+（4）各子句一般要分行写。
+（5）使用缩进提高语句的可读性。
+*/
+
+
+-- 1.2 列别名
+
+select ename AS name, deptno dn from emp;
+
+select sal +1 from emp;
+
+-- 1.4 常用函数
+
+select count(*) cnt from emp;
+select max(sal) max_sal from emp;
+select min(sal) min_sal from emp;
+select sum(sal) sum_sal from emp; 
+select avg(sal) avg_sal from emp;
+
+-- .1.5 Limit语句
+
+select * from emp limit 5;
+select * from emp limit 2,3;
+
+-- 1.6 Where语句
+select * from emp where sal >1000;
+
+-- 1.7 比较运算符（Between/In/ Is Null）
+
+select * from emp where sal =5000;
+select * from emp where sal between 500 and 1000;
+select * from emp where comm is null;
+select * from emp where sal IN (1500, 5000);
+
+
+-- 1.8 Like和RLike
+select * from emp where ename LIKE 'A%';
+select * from emp where ename LIKE '_A%';
+select * from emp where ename  RLIKE '[A-N]';
+
+-- 1.9 逻辑运算符（And/Or/Not）
+
+ select * from emp where sal>1000 and deptno=30;
+ select * from emp where sal>1000 or deptno=30;
+select * from emp where deptno not IN(30, 20);
+
+
+-- ### 2 分组
+
+-- 2.1 Group By语句
+select t.deptno, avg(t.sal) avg_sal from emp t group by t.deptno;
+
+select t.deptno, t.job, max(t.sal) max_sal from emp t group by
+ t.deptno, t.job;
+
+
+-- 2.2 Having语句
+ select deptno, avg(sal) from emp group by deptno;
+select deptno, avg(sal) avg_sal from emp group by deptno having
+ avg_sal > 2000;
+
+-- ## 3 Join语句
+-- 3.1 等值Join
+ -- 需求一： 获取 emp 和 dept的交集的数据
+
+select
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e
+join dept d
+on e.deptno = d.deptno;
+
++----------+----------+-----------+-----------+-------------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  |   d.dname   |
++----------+----------+-----------+-----------+-------------+
+| 7369     | SMITH    | 20        | 20        | RESEARCH    |
+| 7499     | ALLEN    | 30        | 30        | SALES       |
+| 7521     | WARD     | 30        | 30        | SALES       |
+| 7566     | JONES    | 20        | 20        | RESEARCH    |
+| 7654     | MARTIN   | 30        | 30        | SALES       |
+| 7698     | BLAKE    | 30        | 30        | SALES       |
+| 7782     | CLARK    | 10        | 10        | ACCOUNTING  |
+| 7788     | SCOTT    | 20        | 20        | RESEARCH    |
+| 7839     | KING     | 10        | 10        | ACCOUNTING  |
+| 7844     | TURNER   | 30        | 30        | SALES       |
+| 7876     | ADAMS    | 20        | 20        | RESEARCH    |
+| 7900     | JAMES    | 30        | 30        | SALES       |
+| 7902     | FORD     | 20        | 20        | RESEARCH    |
+| 7934     | MILLER   | 10        | 10        | ACCOUNTING  |
++----------+----------+-----------+-----------+-------------+
+
+
+-- 需求二： 获取 emp 的全部数据 和 dept的中能匹配到的数据
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+left join dept d 
+on e.deptno=d.deptno;
+
++----------+----------+-----------+-----------+-------------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  |   d.dname   |
++----------+----------+-----------+-----------+-------------+
+| 7369     | SMITH    | 20        | 20        | RESEARCH    |
+| 7499     | ALLEN    | 30        | 30        | SALES       |
+| 7521     | WARD     | 30        | 30        | SALES       |
+| 7566     | JONES    | 20        | 20        | RESEARCH    |
+| 7654     | MARTIN   | 30        | 30        | SALES       |
+| 7698     | BLAKE    | 30        | 30        | SALES       |
+| 7782     | CLARK    | 10        | 10        | ACCOUNTING  |
+| 7788     | SCOTT    | 20        | 20        | RESEARCH    |
+| 7839     | KING     | 10        | 10        | ACCOUNTING  |
+| 7844     | TURNER   | 30        | 30        | SALES       |
+| 7876     | ADAMS    | 20        | 20        | RESEARCH    |
+| 7900     | JAMES    | 30        | 30        | SALES       |
+| 7902     | FORD     | 20        | 20        | RESEARCH    |
+| 7934     | MILLER   | 10        | 10        | ACCOUNTING  |
++----------+----------+-----------+-----------+-------------+
+
+-- 需求三： 获取 dept 的全部数据 和 emp的中能匹配到的数据--- 
+方式一：
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from dept d
+left join emp e 
+on e.deptno=d.deptno;
+
+---方式二：
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+right join dept d 
+on e.deptno=d.deptno;
+
++----------+----------+-----------+-----------+-------------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  |   d.dname   |
++----------+----------+-----------+-----------+-------------+
+| 7782     | CLARK    | 10        | 10        | ACCOUNTING  |
+| 7839     | KING     | 10        | 10        | ACCOUNTING  |
+| 7934     | MILLER   | 10        | 10        | ACCOUNTING  |
+| 7369     | SMITH    | 20        | 20        | RESEARCH    |
+| 7566     | JONES    | 20        | 20        | RESEARCH    |
+| 7788     | SCOTT    | 20        | 20        | RESEARCH    |
+| 7876     | ADAMS    | 20        | 20        | RESEARCH    |
+| 7902     | FORD     | 20        | 20        | RESEARCH    |
+| 7499     | ALLEN    | 30        | 30        | SALES       |
+| 7521     | WARD     | 30        | 30        | SALES       |
+| 7654     | MARTIN   | 30        | 30        | SALES       |
+| 7698     | BLAKE    | 30        | 30        | SALES       |
+| 7844     | TURNER   | 30        | 30        | SALES       |
+| 7900     | JAMES    | 30        | 30        | SALES       |
+| NULL     | NULL     | NULL      | 40        | OPERATIONS  |
+
+
+-- 需求四： 获取emp独有的数据
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+left join dept d 
+on e.deptno=d.deptno
+where d.deptno is null ;
+
++----------+----------+-----------+-----------+----------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  | d.dname  |
++----------+----------+-----------+-----------+----------+
+| 8888     | MILLER   | 60        | NULL      | NULL     |
++----------+----------+-----------+-----------+----------+
+ 获取左表独有数据的过滤办法： 先做连接获取左表的所有的数据形成虚表T1,然后在 t1 表的基础上过滤出 右边为空的行
+
+-- 需求五：获取dept独有的数据 
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+right join dept d 
+on e.deptno=d.deptno
+where e.deptno is null
+;
++----------+----------+-----------+-----------+-------------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  |   d.dname   |
++----------+----------+-----------+-----------+-------------+
+| NULL     | NULL     | NULL      | 40        | OPERATIONS  |
++----------+----------+-----------+-----------+-------------+
+ 获取右表独有数据的过滤办法： 先做连接获取右表的所有的数据形成虚表T1,然后在 t1 表的基础上过滤出 左表边为空的行
+ +----------+----------+-----------+-----------+-------------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  |   d.dname   |
++----------+----------+-----------+-----------+-------------+
+| 7782     | CLARK    | 10        | 10        | CCOUNTING   |
+| 7839     | KING     | 10        | 10        | CCOUNTING   |
+| 7934     | MILLER   | 10        | 10        | CCOUNTING   |
+| 7369     | SMITH    | 20        | 20        | RESEARCH    |
+| 7566     | JONES    | 20        | 20        | RESEARCH    |
+| 7788     | SCOTT    | 20        | 20        | RESEARCH    |
+| 7876     | ADAMS    | 20        | 20        | RESEARCH    |
+| 7902     | FORD     | 20        | 20        | RESEARCH    |
+| 7499     | ALLEN    | 30        | 30        | SALES       |
+| 7521     | WARD     | 30        | 30        | SALES       |
+| 7654     | MARTIN   | 30        | 30        | SALES       |
+| 7698     | BLAKE    | 30        | 30        | SALES       |
+| 7844     | TURNER   | 30        | 30        | SALES       |
+| 7900     | JAMES    | 30        | 30        | SALES       |
+| NULL     | NULL     | NULL      | 40        | OPERATIONS  |
++----------+----------+-----------+-----------+-------------+
+
+
+-- 需求六： 获取emp和dept所有的数据
+---方式一：
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+left join dept d 
+on e.deptno=d.deptno
+union
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+right join dept d 
+on e.deptno=d.deptno
+;
+
+union 是去除重复
+union all 是不去重的
+
+>> 所有的数据结果
++------------+------------+-------------+------------+
+| _u1.empno  | _u1.ename  | _u1.deptno  | _u1.dname  |
++------------+------------+-------------+------------+
+| NULL       | NULL       | NULL        | 40         |
+| 7369       | SMITH      | 20          | 20         |
+| 7499       | ALLEN      | 30          | 30         |
+| 7521       | WARD       | 30          | 30         |
+| 7566       | JONES      | 20          | 20         |
+| 7654       | MARTIN     | 30          | 30         |
+| 7698       | BLAKE      | 30          | 30         |
+| 7782       | CLARK      | 10          | 10         |
+| 7788       | SCOTT      | 20          | 20         |
+| 7839       | KING       | 10          | 10         |
+| 7844       | TURNER     | 30          | 30         |
+| 7876       | ADAMS      | 20          | 20         |
+| 7900       | JAMES      | 30          | 30         |
+| 7902       | FORD       | 20          | 20         |
+| 7934       | MILLER     | 10          | 10         |
+| 9999       | MILLE      | 9999        | NULL       |
++------------+------------+-------------+------------+
+16 rows selected (52.189 seconds)
+
+
+---方式二： （full join Hive独有的关联方式，mysql不支持，oracle支持)
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+full outer join dept d 
+on e.deptno=d.deptno;
+
+
++----------+----------+-----------+-----------+-------------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  |   d.dname   |
++----------+----------+-----------+-----------+-------------+
+| 7782     | CLARK    | 10        | 10        | ACCOUNTING  |
+| 7934     | MILLER   | 10        | 10        | ACCOUNTING  |
+| 7839     | KING     | 10        | 10        | ACCOUNTING  |
+| 7369     | SMITH    | 20        | 20        | RESEARCH    |
+| 7902     | FORD     | 20        | 20        | RESEARCH    |
+| 7876     | ADAMS    | 20        | 20        | RESEARCH    |
+| 7788     | SCOTT    | 20        | 20        | RESEARCH    |
+| 7566     | JONES    | 20        | 20        | RESEARCH    |
+| 7900     | JAMES    | 30        | 30        | SALES       |
+| 7698     | BLAKE    | 30        | 30        | SALES       |
+| 7654     | MARTIN   | 30        | 30        | SALES       |
+| 7521     | WARD     | 30        | 30        | SALES       |
+| 7844     | TURNER   | 30        | 30        | SALES       |
+| 7499     | ALLEN    | 30        | 30        | SALES       |
+| NULL     | NULL     | NULL      | 40        | OPERATIONS  |
+| 8888     | MILLER   | 60        | NULL      | NULL        |
++----------+----------+-----------+-----------+-------------+
+16 rows selected (1.552 seconds)
+
+full outer join 
+full  join
+
+
+-- 需求七： 获取emp和dept的各自独有的数据
+select 
+e.empno, e.ename, e.deptno, d.deptno, d.dname
+from emp e 
+full join dept d 
+on e.deptno=d.deptno
+where e.deptno is null 
+or d.deptno is null 
+;
++----------+----------+-----------+-----------+-------------+
+| e.empno  | e.ename  | e.deptno  | d.deptno  |   d.dname   |
++----------+----------+-----------+-----------+-------------+
+| NULL     | NULL     | NULL      | 40        | OPERATIONS  |
+| 8888     | MILLER   | 60        | NULL      | NULL        |
++----------+----------+-----------+-----------+-------------+
+
+从所有的数据里面摘取独有的数据结果。
